@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anatomija računala - interaktivni 3D atlas računalnog hardvera</title>
+<meta name="description" content="Interaktivni 3D atlas računala: istražite procesor, matičnu ploču, RAM, grafičku karticu, pohranu i ostale komponente te naučite što svaka radi.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
+
+<!-- Mapiranje modula: sve biblioteke su lokalno u mapi vendor/ (ne treba internet). -->
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+
+<style>
+/* Fontovi (lokalno, SIL OFL): Space Grotesk za naslove, Manrope za tekst */
+@font-face{font-family:'Space Grotesk';font-style:normal;font-display:swap;font-weight:300 700;src:url(fonts/space-grotesk-vietnamese-wght-normal.woff2) format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Space Grotesk';font-style:normal;font-display:swap;font-weight:300 700;src:url(fonts/space-grotesk-latin-ext-wght-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Space Grotesk';font-style:normal;font-display:swap;font-weight:300 700;src:url(fonts/space-grotesk-latin-wght-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Manrope';font-style:normal;font-display:swap;font-weight:200 800;src:url(fonts/manrope-vietnamese-wght-normal.woff2) format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Manrope';font-style:normal;font-display:swap;font-weight:200 800;src:url(fonts/manrope-latin-ext-wght-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Manrope';font-style:normal;font-display:swap;font-weight:200 800;src:url(fonts/manrope-latin-wght-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+
+:root{
+  --bg:#07090f; --bg2:#0d111b; --card:#111726; --line:rgba(255,255,255,.09);
+  --text:#e8ecf5; --muted:#8b95ab; --accent:#4d8dff; --accent2:#7a5cff;
+  --font-body:'Manrope',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+  --font-head:'Space Grotesk','Manrope',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:var(--font-body);background:var(--bg);color:var(--text);line-height:1.6}
+a{color:var(--accent)}
+h1,h2,h3,h4,h5{line-height:1.15;margin:0;font-family:var(--font-head)}
+.brand,.eyebrow,.btn,.chip,.tab,.idx,.num,.item small{font-family:var(--font-head)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+
+/* Zaglavlje */
+header.top{position:sticky;top:0;z-index:50;background:rgba(7,9,15,.82);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:16px}
+.brand{font-weight:800;letter-spacing:-.02em;color:#fff;text-decoration:none;display:flex;gap:8px;align-items:center}
+nav a{color:var(--muted);text-decoration:none;margin-left:20px;font-size:.92rem}
+nav a:hover{color:#fff}
+
+/* Uvod */
+.hero{padding:96px 0 72px;background:radial-gradient(900px 400px at 15% 0%,rgba(77,141,255,.18),transparent 70%),radial-gradient(700px 400px at 90% 20%,rgba(122,92,255,.14),transparent 70%)}
+.hero h1{font-size:clamp(2.2rem,6vw,4.4rem);font-weight:800;letter-spacing:-.03em;max-width:14ch}
+.grad{background:linear-gradient(90deg,var(--accent),var(--accent2),#d06bff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{max-width:640px;color:var(--muted);font-size:1.08rem;margin:22px 0 0}
+.btns{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.btn{display:inline-block;padding:12px 22px;border-radius:12px;font-weight:600;text-decoration:none;border:1px solid var(--line);color:#fff;background:var(--card);cursor:pointer;font-size:.95rem;font-family:inherit}
+.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent}
+.btn:hover{filter:brightness(1.15)}
+.note{margin-top:34px;max-width:640px;border-top:1px solid var(--line);padding-top:16px;font-size:.78rem;color:#667089}
+
+section{padding:72px 0}
+.eyebrow{color:var(--accent);font-size:.78rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.sec-title{font-size:clamp(1.7rem,3.6vw,2.6rem);font-weight:800;letter-spacing:-.02em;margin:8px 0 10px}
+.sec-sub{color:var(--muted);max-width:640px;margin:0 0 34px}
+
+/* Koraci učenja */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.step{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
+.step b{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:rgba(77,141,255,.18);color:var(--accent);font-size:.85rem;margin-bottom:12px}
+.step h4{font-size:1.05rem;margin-bottom:6px}
+.step p{margin:0;color:var(--muted);font-size:.93rem}
+
+/* Istraživač */
+#explorer{background:var(--bg2);border-block:1px solid var(--line)}
+.explorer{display:grid;grid-template-columns:230px minmax(0,1fr) 360px;gap:16px;align-items:start}
+.list{display:flex;flex-direction:column;gap:6px;max-height:640px;overflow:auto;padding-right:4px}
+.item{display:flex;gap:10px;align-items:center;text-align:left;width:100%;padding:10px 12px;border-radius:12px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font:inherit;font-size:.92rem}
+.item small{font-variant-numeric:tabular-nums;opacity:.6}
+.item:hover{background:rgba(255,255,255,.04);color:#fff}
+.item[aria-current="true"]{background:rgba(77,141,255,.14);border-color:rgba(77,141,255,.45);color:#fff}
+.stage{position:relative;height:640px;border-radius:18px;border:1px solid var(--line);overflow:hidden;background:radial-gradient(circle at 50% 40%,#1a2236,#0a0e18 70%)}
+#viewer{position:absolute;inset:0}
+#viewer canvas{display:block;touch-action:none}
+.loader{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--muted);background:rgba(7,9,15,.55);font-size:.95rem;padding:20px;transition:opacity .25s}
+.loader.hide{opacity:0;pointer-events:none}
+.bar{width:180px;height:4px;background:rgba(255,255,255,.12);border-radius:4px;margin:12px auto 0;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.tools{position:absolute;left:12px;bottom:12px;display:flex;gap:8px;flex-wrap:wrap}
+.tools .btn{padding:8px 14px;font-size:.82rem;background:rgba(17,23,38,.85)}
+.hint{position:absolute;right:14px;bottom:16px;font-size:.74rem;color:#667089;text-align:right;max-width:46%}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;max-height:640px;overflow:auto}
+.panel .idx{color:var(--accent);font-size:.78rem;font-weight:700;letter-spacing:.12em}
+.panel h3{font-size:1.7rem;margin:4px 0 2px}
+.panel .tag{color:var(--muted);font-size:.92rem;margin:0 0 14px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px;flex-wrap:wrap}
+.tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);padding:8px 10px;cursor:pointer;font:inherit;font-size:.88rem}
+.tab[aria-selected="true"]{color:#fff;border-color:var(--accent)}
+.pane h4{font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:16px 0 4px}
+.pane h4:first-child{margin-top:0}
+.pane p{margin:0;font-size:.92rem;color:#c4cbdb}
+.pane ul{margin:0;padding-left:18px;font-size:.92rem;color:#c4cbdb}
+.pane li{margin-bottom:6px}
+.spec{width:100%;border-collapse:collapse;font-size:.9rem}
+.spec td{padding:9px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.spec td:first-child{color:var(--muted);padding-right:12px;width:45%}
+.credit{margin-top:16px;padding-top:12px;border-top:1px solid var(--line);font-size:.72rem;color:#667089}
+
+/* Slojevi CPU-a */
+.cpu-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start}
+.cpu-side{position:sticky;top:76px}
+.stage2{position:relative;height:520px;border-radius:18px;border:1px solid var(--line);overflow:hidden;background:radial-gradient(circle at 50% 40%,#1a2236,#0a0e18 70%)}
+#cpuViewer{position:absolute;inset:0}
+#cpuViewer canvas{display:block;touch-action:none;cursor:grab}
+.cap{position:absolute;left:14px;top:12px;right:14px;font-size:.88rem;color:#c4cbdb;pointer-events:none;text-shadow:0 1px 6px #000}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--muted);cursor:pointer;font:inherit;font-size:.84rem}
+.chip:hover{color:#fff}
+.chip[aria-pressed="true"]{color:#fff;border-color:rgba(77,141,255,.6);background:rgba(77,141,255,.14)}
+.layers{display:grid;gap:12px}
+details.layer{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:0}
+details.layer[open]{border-color:rgba(77,141,255,.45)}
+details.layer summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:14px;padding:16px 20px;font-weight:700}
+details.layer summary::-webkit-details-marker{display:none}
+.dot{width:14px;height:14px;border-radius:50%;flex:none;box-shadow:0 0 0 3px rgba(255,255,255,.08)}
+.num{color:var(--muted);font-weight:500;font-size:.85rem}
+.layer .body{padding:0 20px 20px;display:grid;gap:18px}
+.figs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+figure{margin:0;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:10px}
+figure svg{width:100%;height:auto;display:block}
+figcaption{font-size:.74rem;color:var(--muted);text-align:center;margin-top:6px}
+.layer .body h5{margin:0 0 4px;font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.layer .body p,.layer .body ul{margin:0;font-size:.92rem;color:#c4cbdb}
+.layer .body ul{padding-left:18px}
+.layer .body li{margin-bottom:5px}
+
+/* Banner / podnožje */
+.banner{display:none;background:#3a2a05;color:#ffd98a;border-bottom:1px solid #6b4d0a;padding:12px 20px;font-size:.9rem;text-align:center}
+.banner code{background:rgba(0,0,0,.35);padding:2px 6px;border-radius:5px}
+footer{padding:44px 0;border-top:1px solid var(--line);color:#667089;font-size:.84rem}
+footer p{margin:0 0 8px;max-width:760px}
+
+@media (max-width:1020px){
+  .explorer{grid-template-columns:1fr}
+  .list{flex-direction:row;overflow-x:auto;max-height:none;padding:0 0 6px}
+  .item{width:auto;white-space:nowrap;flex:none;border-color:var(--line)}
+  .stage{height:460px}
+  .panel{max-height:none}
+  nav a:nth-child(n+4){display:none}
+  .cpu-grid{grid-template-columns:1fr}
+  .cpu-side{position:static}
+  .stage2{height:420px}
+}
+@media (max-width:520px){.figs{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="banner" id="fileBanner">
+  ⚠️ Stranica je otvorena izravno iz datoteke (<code>file://</code>), a preglednici tada blokiraju učitavanje 3D modela.
+  Pokrenite lokalni poslužitelj: u mapi projekta upišite <code>python -m http.server 8000</code> pa otvorite
+  <code>http://localhost:8000</code> - ili stranicu objavite na GitHub Pages.
+</div>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#pocetak">🖥️ Dijelovi računala</a>
+    <nav>
+      <a href="#pocetak">Početna</a>
+      <a href="#kako-uciti">Kako učiti</a>
+      <a href="#istrazivac">Istraživač</a>
+      <a href="#slojevi-cpu">Slojevi CPU-a</a>
+    </nav>
+  </div>
+</header>
+
+<main id="pocetak">
+  <div class="hero">
+    <div class="wrap">
+      <h1>Naučite računalni hardver <span class="grad">kao nikada prije.</span></h1>
+      <p>Anatomija računala je otvoreni obrazovni 3D atlas koji uči računalni hardver kroz imerzivnu vizualizaciju.
+         Istražite procesor, RAM, matičnu ploču, grafičku karticu, pohranu i napajanje - saznajte što svaki dio radi,
+         i to jednostavnim jezikom.</p>
+      <div class="btns">
+        <a class="btn primary" href="#istrazivac">Pokreni 3D istraživač</a>
+        <a class="btn" href="#slojevi-cpu">Pogledaj slojeve CPU-a</a>
+      </div>
+      <p class="note">Napomena: svi 3D modeli prikazani u Anatomiji računala preuzeti su od vanjskih autora i ostaju vlasništvo
+        svojih autora, podložni izvornim licencama.</p>
+    </div>
+  </div>
+
+  <section id="kako-uciti">
+    <div class="wrap">
+      <div class="eyebrow">Iskustvo učenja</div>
+      <h2 class="sec-title">Kako učiti uz ovaj atlas</h2>
+      <p class="sec-sub">Četiri jednostavna koraka od osnova do razumijevanja cijelog računala kao povezanog sustava.</p>
+      <div class="steps">
+        <div class="step"><b>1</b><h4>Počnite s osnovama</h4><p>Naučite što je koji dio i koja je njegova uloga u sustavu prije nego što zaronite dublje.</p></div>
+        <div class="step"><b>2</b><h4>Pogledajte kako se dijelovi povezuju</h4><p>Pratite signale kroz matičnu ploču, sabirnice i priključke da biste razumjeli tok podataka.</p></div>
+        <div class="step"><b>3</b><h4>Rotirajte i zumirajte modele</h4><p>Okrećite 3D model mišem ili prstom, zumirajte kotačićem i promatrajte svaki detalj izbliza.</p></div>
+        <div class="step"><b>4</b><h4>Primijenite i složite</h4><p>Povežite znanje i razumite cijelo računalo kao jedan povezan sustav.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="istrazivac">
+    <div class="wrap">
+      <div class="eyebrow">Interaktivni 3D istraživač</div>
+      <h2 class="sec-title">Istražite komponente računala</h2>
+      <p class="sec-sub">Odaberite komponentu s popisa, zatim je rotirajte, zumirajte i pročitajte kako radi.</p>
+
+      <div class="explorer">
+        <div class="list" id="list" role="list" aria-label="Popis komponenti"></div>
+
+        <div class="stage">
+          <div id="viewer" aria-label="3D prikaz odabrane komponente"></div>
+          <div class="loader" id="loader"><div><span id="loaderText">Učitavanje 3D modela…</span><div class="bar"><i id="bar"></i></div></div></div>
+          <div class="tools">
+            <button class="btn" id="btnRotate" type="button">⏸ Zaustavi rotaciju</button>
+            <button class="btn" id="btnReset" type="button">⟲ Vrati pogled</button>
+          </div>
+          <div class="hint">Povuci za rotaciju · kotačić za zumiranje · desni klik za pomicanje</div>
+        </div>
+
+        <aside class="panel" id="panel" aria-live="polite"></aside>
+      </div>
+    </div>
+  </section>
+
+  <section id="slojevi-cpu">
+    <div class="wrap">
+      <div class="eyebrow">Anatomija procesora</div>
+      <h2 class="sec-title">Slojevi CPU-a</h2>
+      <p class="sec-sub">Procesor je građen od pet slojeva - od metalnog poklopca na vrhu do zlatnih kontakata na dnu. Rastavite model i odaberite sloj da vidite što radi.</p>
+      <div class="cpu-grid">
+        <div class="cpu-side">
+          <div class="stage2">
+            <div id="cpuViewer" aria-label="3D prikaz slojeva procesora"></div>
+            <div class="loader" id="cpuMsg"><div>Pripremam 3D prikaz…</div></div>
+            <div class="cap" id="cpuCaption">Kliknite sloj na modelu ili na popisu.</div>
+            <div class="tools">
+              <button class="btn" id="btnExplode" type="button">⇕ Rastavi slojeve</button>
+              <button class="btn" id="btnCpuReset" type="button">⟲ Vrati pogled</button>
+            </div>
+            <div class="hint">Povuci za rotaciju · kotačić za zumiranje · klik na sloj za odabir</div>
+          </div>
+          <div class="chips" id="cpuChips" role="group" aria-label="Odabir sloja"></div>
+        </div>
+        <div class="layers" id="layers"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    
+    <p>3D modeli pripadaju svojim autorima i koriste se prema njihovim licencama (Creative Commons). Autori pojedinih modela navedeni su ispod opisa svake komponente.</p>
+  </div>
+</footer>
+
+<script>
+/* ============================ PODACI (hrvatski) ============================ */
+var CC = "CC BY 4.0";
+var COMPONENTS = [
+{id:"pc-case",index:"01",name:"Računalno kućište",tagline:"Cjelovito kućište sustava",
+ short:"Ljuska koja smješta, hladi i štiti sve unutarnje komponente.",model:"models/system_unit_update.glb",
+ overview:{description:"Računalno kućište (još i sistemska jedinica ili šasija) strukturni je dom računala. Osim izgleda, pruža nosače za svaku komponentu, usmjerava protok zraka, omogućuje uredno vođenje kabela te štiti od prašine, statičkog elektriciteta i fizičkih oštećenja.",
+  realWorld:"Odabir kućišta oblikuje cijelu konfiguraciju: prednja mrežasta ploča hrani ventilatore zrakom, kaljeno staklo otkriva unutrašnjost, a ležišta za diskove određuju koliko pohrane možete ugraditi.",
+  fact:"Neka entuzijastička kućišta projektirana su s rasporedom negativnog tlaka i posebnim kanalima za kabele iza matične ploče kako bi protok zraka bio potpuno neometan."},
+ specs:[["Format","Srednji toranj (Mid-Tower)"],["Podrška za matične ploče","ATX / mATX / ITX"],["Prostor za GPU","360 mm"],["Nosači ventilatora","Do 6× 120 mm"],["Ležišta za diskove","2× 3,5″ + 3× 2,5″"]],
+ functions:["Nose matičnu ploču, napajanje, diskove i ventilatore.","Usmjeravaju zrak od usisa do ispuha.","Vode i skrivaju kabele za uredne i hladnije konfiguracije.","Štite komponente od prašine, elektrostatskog izboja i oštećenja."],
+ issues:["Restriktivne prednje ploče gase usisne ventilatore.","Začepljeni filtri za prašinu smanjuju protok zraka.","Pogrešno poravnati distanceri mogu izazvati kratki spoj matične ploče.","Nedovoljno prostora za prevelike grafičke kartice ili hladnjake."],
+ credit:{t:"Dream Computer Setup",u:"https://skfb.ly/6QW96",a:"Daniel Cardona",l:CC}},
+{id:"cpu",index:"02",name:"CPU",tagline:"Središnja procesorska jedinica",
+ short:"Mozak računala - izvršava naredbe i koordinira svaki zadatak.",model:"models/cpu.glb",
+ overview:{description:"Središnja procesorska jedinica (CPU) je silicijski mozak računala. Dekodira i izvršava milijarde naredbi u sekundi - od aritmetike i logike do pristupa memoriji - i upravlja svime što od njega traže operacijski sustav i aplikacije.",
+  realWorld:"U vašem prijenosniku ili telefonu CPU određuje koliko glatko reagiraju aplikacije. Kad pritisnete tipku ili otvorite novu karticu preglednika, CPU raspoređuje posao, provjerava podatke i prikaz prepušta GPU-u - sve unutar mikrosekundi.",
+  fact:"Moderni CPU sadrži više od 8 milijardi tranzistora na čipu manjem od poštanske marke. Prvi Intelov 4004 iz 1971. imao ih je samo 2300."},
+ specs:[["Podnožje (socket)","LGA 1700 / AM5"],["Jezgre","8"],["Dretve","16"],["Takt","3,7 - 5,2 GHz"],["Predmemorija","24 MB L3"]],
+ functions:["Dohvaća, dekodira i izvršava naredbe iz RAM-a.","Izvodi aritmetičke i logičke operacije (ALU).","Koordinira tok podataka između memorije, pohrane i periferije.","Raspoređuje zadatke po jezgrama i dretvama."],
+ issues:["Pregrijavanje pod dugotrajnim opterećenjem bez dovoljnog hlađenja.","Savijeni pinovi ili oštećeni kontakti podnožja sprječavaju pokretanje.","Osušena ili neispravno nanesena termalna pasta.","Degradacija silicija zbog prevelikih napona pri overclockingu."],
+ credit:{t:"CPU Ryzen 5 3600",u:"https://skfb.ly/on9Ao",a:"Fochdog",l:CC}},
+{id:"motherboard",index:"03",name:"Matična ploča",tagline:"Glavna sistemska ploča",
+ short:"Okosnica koja povezuje sve komponente u jedno ispravno računalo.",model:"models/motherboard.glb",
+ overview:{description:"Matična ploča je glavna tiskana pločica koja fizički i električki povezuje sve komponente. Napajanje, podaci i signali putuju njezinim stazama, utorima i konektorima, pa je ona živčani sustav računala.",
+  realWorld:"Odabir matične ploče određuje koji CPU, RAM i pohranu možete ugraditi - njezino podnožje i čipset određuju put nadogradnje. Graditelji ploču usklađuju s kućištem tako da se priključci i distanceri poklapaju.",
+  fact:"Matična ploča može imati više od desetak slojeva bakrenih staza složenih poput sendviča, sve projektirano tako da signali stignu unutar pikosekundi jedni od drugih."},
+ specs:[["Format","ATX / mATX / ITX"],["Podnožje procesora","LGA 1700 / AM5"],["Čipset","Z790 / B650"],["RAM utori","4 × DDR5"],["Utori za proširenje","PCIe 5.0 ×16"]],
+ functions:["Raspodjeljuje napajanje iz PSU-a na svaku komponentu.","Usmjerava podatke između CPU-a, RAM-a, GPU-a i pohrane.","Nosi utore za proširenje, priključke i konektore.","Prijavljuje stanje sustava i upravlja stanjima napajanja preko BIOS-a."],
+ issues:["Neuspjela nadogradnja BIOS-a ostavlja ploču bez mogućnosti pokretanja.","Savijeni pinovi podnožja ili oštećene staze.","Natečeni kondenzatori ili pregrijani VRM na jeftinim pločama.","Kratki spoj zbog pogrešno postavljenih distancera."],
+ credit:{t:"PC motherboard ASUS Prime H510M-K",u:"https://skfb.ly/oFrRt",a:"zhigulinsky",l:CC}},
+{id:"ram",index:"04",name:"RAM",tagline:"Radna memorija (Random Access Memory)",
+ short:"Brza radna memorija koja drži podatke koje CPU trenutačno koristi.",model:"models/ram.glb",
+ overview:{description:"RAM je kratkoročna radna memorija računala. Pohranjuje podatke i naredbe koje CPU treba upravo sada, žrtvujući kapacitet za brzinu kako procesor nikada ne bi morao čekati sporiju pohranu.",
+  realWorld:"Kad uređujete dokument, on živi u RAM-u dok ga ne spremite na SSD. Više RAM-a omogućuje desetke otvorenih kartica preglednika i zahtjevnih aplikacija bez usporavanja.",
+  fact:"RAM je hlapljiv - sve u njemu nestaje čim se prekine napajanje. Zato pri naglom gašenju možete izgubiti nespremljen rad."},
+ specs:[["Vrsta","DDR5"],["Kapacitet","16 - 32 GB"],["Brzina","5600 MT/s"],["Latencija","CL36"],["Kanali","Dvokanalno"]],
+ functions:["Drži aktivne programe i podatke za trenutni pristup CPU-a.","Služi kao brza međuspremna zona između CPU-a i pohrane.","Podržava višezadaćnost držeći mnogo procesa u memoriji.","Osigurava memoriju za zajednički pristup GPU-a (dijeljeni VRAM)."],
+ issues:["Neispravno umetnuti moduli uzrokuju zvučne signale pri pokretanju.","Miješanje nekompatibilnih brzina prisiljava sporiji rad.","Neispravni moduli uzrokuju nasumične padove i plave ekrane.","Prašina ili korozija na zlatnim kontaktima."],
+ credit:{t:"[RAM DDR4] G.Skill Trident Z NEO",u:"https://skfb.ly/6WOrn",a:"Zon Digital",l:"CC BY-NC-ND 4.0"}},
+{id:"gpu",index:"05",name:"GPU",tagline:"Grafička procesorska jedinica",
+ short:"Paralelna snaga koja iscrtava slike i ubrzava AI zadatke.",model:"models/gpu.glb",
+ overview:{description:"Grafička procesorska jedinica je masovno paralelni procesor namijenjen grafici i računanju. Iscrtava sličice za vaš zaslon i ubrzava zadatke poput strojnog učenja i kodiranja videa pomoću tisuća malih jezgri.",
+  realWorld:"Svaku sliku na zaslonu izračunava GPU - od 3D igre pri 240 fps-a do listanja web-stranice. Moderni GPU-ovi pokreću i AI značajke u aplikacijama i igrama preko tenzorskih jezgri i hardvera za praćenje zraka.",
+  fact:"Vrhunski GPU može imati više od 16 000 jezgri i izvesti više od 80 bilijuna operacija s pomičnim zarezom u sekundi - otprilike milijun puta više od superračunala iz 1980-ih."},
+ specs:[["VRAM","16 GB"],["Vrsta memorije","GDDR6X"],["Računske jezgre","16 384"],["Boost takt","2,6 GHz"],["Potrošnja","320 W"]],
+ functions:["Iscrtava 3D scene, sučelje i video pri visokom broju sličica.","Preuzima paralelno računanje za AI i znanstvene zadatke.","Kodira i dekodira video tokove namjenskim hardverom.","Pokreće više zaslona istovremeno."],
+ issues:["Pregrijavanje zbog osušenih termalnih jastučića na hladnjaku.","Progib (sag) kartice opterećuje PCIe utor tijekom vremena.","Loše uglavljeni konektori napajanja pod velikim opterećenjem.","Sukobi upravljačkih programa uzrokuju padove ili artefakte."],
+ credit:{t:"MSI GeForce RTX 3080 Gaming X Trio | Now Free!",u:"https://skfb.ly/ow8HY",a:"M E U",l:CC}},
+{id:"ssd",index:"06",name:"SSD",tagline:"2,5″ SATA SSD disk",
+ short:"Tiha, munjevito brza pohrana bez pokretnih dijelova, preko SATA veze.",model:"models/ssd_solid_state_drive.glb",
+ overview:{description:"SSD (Solid State Drive) pohranjuje podatke na flash memorijske čipove umjesto na rotirajuće ploče. Bez pokretnih dijelova nudi gotovo trenutno pokretanje, brzo učitavanje aplikacija i veliku otpornost na udarce.",
+  realWorld:"Klasični 2,5-inčni SATA SSD omiljena je nadogradnja za prijenosnike i starija stolna računala - stane u svako ležište i koristi isti kabel kao tvrdi disk, a znatno je brži i tiši.",
+  fact:"2,5″ SATA SSD doseže oko 550 MB/s, otprilike deset puta brže od rotirajućeg tvrdog diska - no i dalje zaostaje za najbržim NVMe diskovima."},
+ specs:[["Sučelje","SATA III"],["Format","2,5 inča"],["Kapacitet","1 TB"],["Brzina čitanja","550 MB/s"],["Brzina pisanja","520 MB/s"]],
+ functions:["Trajno čuva operacijski sustav, programe i datoteke.","Pruža brz nasumični pristup bez pokretnih dijelova.","Znatno ubrzava starije sustave jednostavnom zamjenom diska.","Radi bešumno i otporan je na udarce i vibracije."],
+ issues:["Greške u firmveru zbog kojih disk nestane iz sustava.","Isključen TRIM pogoršava brzinu pisanja.","SATA propusnost ograničava performanse ispod NVMe-a.","Trošenje NAND ćelija kod jeftinih diskova s velikim brojem upisa."],
+ credit:{t:"(SSD) Solid State Drive",u:"https://skfb.ly/otSKU",a:"MarkCP",l:CC}},
+{id:"m2-ssd",index:"07",name:"M.2 SSD",tagline:"NVMe SSD disk",
+ short:"NVMe disk veličine žvakaće gume koji se montira izravno na matičnu ploču.",model:"models/m.2.glb",
+ overview:{description:"M.2 SSD je tanak SSD koji se montira na ploču. Umeće se izravno u utor matične ploče i povezuje preko PCIe linija, zaobilazeći SATA te dosežući brzine od više gigabajta u sekundi.",
+  realWorld:"M.2 NVMe diskovi razlog su zašto se moderna računala pokreću u nekoliko sekundi, a igre učitavaju u tren oka - bez kabela i ležišta, samo mali vijak i najbrža potrošačka pohrana.",
+  fact:"Vrhunski NVMe M.2 disk može čitati više od 7 GB/s - dovoljno brzo da prekopira cjelovečernji 4K film za manje od sekunde."},
+ specs:[["Sučelje","PCIe 4.0 NVMe"],["Format","M.2 2280"],["Kapacitet","1 TB"],["Brzina čitanja","7000 MB/s"],["Brzina pisanja","5000 MB/s"]],
+ functions:["Smješta operacijski sustav za gotovo trenutno pokretanje.","Prenosi podatke namjenskim PCIe linijama.","Pruža iznimnu nasumičnu i slijednu propusnost.","Montira se uz ploču jednim vijkom."],
+ issues:["Pregrijavanje uzrokuje usporavanje (throttling) bržih M.2 diskova.","Neusklađenost ključeva utora i diska (M naspram B+M).","Dijeljenje propusnosti s GPU-om na nekim pločama.","Greške u firmveru zbog kojih disk nestane iz sustava."],
+ credit:{t:"M.2 SSD (Free)",u:"https://skfb.ly/pJZv8",a:"PolyDavid",l:CC}},
+{id:"hdd",index:"08",name:"HDD",tagline:"Tvrdi disk",
+ short:"Pohrana velikog kapaciteta izgrađena od rotirajućih magnetskih ploča.",model:"models/hdd.glb",
+ overview:{description:"Tvrdi disk (HDD) pohranjuje podatke magnetski na rotirajuće ploče, a čita ih sićušna ruka koja se kreće iznad površine. Nudi najnižu cijenu po gigabajtu, pa je idealan za arhive i masovnu pohranu.",
+  realWorld:"HDD-ovi i danas čuvaju svjetske arhive - NAS uređaji, sigurnosni snimači i poslužitelji za sigurnosne kopije oslanjaju se na njih za terabajte jeftine i pouzdane pohrane koju bi SSD-ovi učinili preskupom.",
+  fact:"Ploče se vrte do 7200 okretaja u minuti, a glava za čitanje lebdi tek nekoliko nanometara iznad površine - tanje od valne duljine svjetlosti."},
+ specs:[["Sučelje","SATA III"],["Format","3,5 inča"],["Kapacitet","4 TB"],["Brzina","7200 o/min"],["Predmemorija","256 MB"]],
+ functions:["Pohranjuje velike količine podataka uz nisku cijenu.","Trajno čuva datoteke i nakon isključivanja napajanja.","Služi kao sloj za sigurnosne kopije i arhivu.","Međuspremnikom grupira upise radi učinkovitosti."],
+ issues:["Fizički udarci uzrokuju „head crash” i gubitak podataka.","Mehaničko trošenje zbog stalnog okretanja.","Loši sektori koji se pojavljuju starenjem ploča.","Vibracije narušavaju performanse u sustavima s više diskova."],
+ credit:{t:"WD Green 1TB Hard Disk HDD",u:"https://skfb.ly/oESOn",a:"MajdyModels",l:CC}},
+{id:"power-supply",index:"09",name:"PSU",tagline:"Napajanje (Power Supply Unit)",
+ short:"Pretvara mrežni napon u čisti, reguliran istosmjerni napon za svaku komponentu.",model:"models/psu.glb",
+ overview:{description:"Napajanje uzima izmjenični mrežni napon i pretvara ga u stabilan niskonaponski istosmjerni napon za sustav. Njegova kvaliteta ne određuje samo snagu, nego i koliko sigurno i tiho radi cijelo računalo.",
+  realWorld:"Dobro napajanje daje ujednačenu snagu pri skokovima opterećenja - ključno kad GPU u milisekundama prelazi iz mirovanja u puno 3D opterećenje. Jeftine jedinice to ne izdrže i mogu povući druge dijelove sa sobom.",
+  fact:"Vrhunsko 80+ Titanium napajanje učinkovito je više od 94 %, odnosno gubi manje od 6 W topline na svakih isporučenih 100 W."},
+ specs:[["Snaga","850 W"],["Učinkovitost","80+ Gold"],["Modularnost","Potpuno modularno"],["Linije","Jedna +12V"],["Format","ATX"]],
+ functions:["Pretvara izmjenični mrežni napon u regulirane istosmjerne napone.","Štiti komponente zaštitama OVP, OCP i od kratkog spoja.","Isporučuje čistu, stabilnu snagu pri skokovima opterećenja.","Napaja uređaje kad je računalo u mirovanju ili isključeno (standby linija)."],
+ issues:["Starenje kondenzatora smanjuje isporučenu snagu tijekom godina.","Nedovoljna snaga uzrokuje nasumična gašenja pod opterećenjem.","Buka ležaja ventilatora i nakupljena prašina ograničavaju protok zraka.","Slab odziv na prijelazne pojave kod jeftinih napajanja."],
+ credit:{t:"PSU Power Supply Unit",u:"https://skfb.ly/oBPC9",a:"Groovex",l:CC}},
+{id:"cpu-cooler",index:"10",name:"CPU hladnjak",tagline:"Toplinsko upravljanje procesorom",
+ short:"Drži procesor unutar sigurnog radnog područja pod bilo kojim opterećenjem.",model:"models/cpu_fan.glb",
+ overview:{description:"CPU hladnjak odvodi golemu toplinu koju proizvodi procesor: prenosi je sa silicija preko bazne ploče i toplinskih cijevi na hladnjak, odakle je ventilatori izbacuju iz kućišta.",
+  realWorld:"Zračni tornjevi i AIO vodeni hladnjaci omogućuju CPU-ima da satima održavaju visoke taktove u igrama. Bez njih bi moderni čip usporio za nekoliko sekundi - ili se isključio radi zaštite.",
+  fact:"CPU može proizvesti više od 250 W topline - dovoljno da zakuha vodu - a hladnjaci tu energiju prenose toplinskim cijevima po istoj fizici kao hladnjak."},
+ specs:[["Vrsta","Zračni toranj"],["Veličina ventilatora","120 mm"],["Podrška za podnožja","LGA / AM5"],["TDP ocjena","220 W"],["Buka","≤ 28 dBA"]],
+ functions:["Prenosi toplinu s CPU jezgre na veliku površinu.","Raspršuje toplinu u protok zraka kućišta ventilatorima.","Omogućuje CPU-u održavanje visokih taktova bez usporavanja.","Drži temperature sigurnima godinama rada."],
+ issues:["Osušena termalna pasta puca i gubi vodljivost.","Prašina začepljuje lamele i blokira protok zraka.","Kvar pumpe kod vodenih hladnjaka uzrokuje trenutne skokove temperature.","Neispravan pritisak montaže deformira ili pregrijava procesor."],
+ credit:{t:"(Free) AMD Wraith Stealth CPU Cooler",u:"https://skfb.ly/pJXNM",a:"PolyDavid",l:CC}},
+{id:"case-fans",index:"11",name:"Ventilatori kućišta",tagline:"Upravljanje protokom zraka",
+ short:"Uvlače hladan zrak i izbacuju topli kako bi regulirali temperaturu kućišta.",model:"models/case_fans.glb",
+ overview:{description:"Ventilatori kućišta stvaraju protok zraka kroz šasiju - povlače hladan zrak preko komponenti i izbacuju toplinu. Uravnoteženi pozitivni i negativni tlak drži prašinu vani, a temperature pod kontrolom.",
+  realWorld:"Moderna kućišta koriste prednje usisne ventilatore koji hladan zrak dovode izravno do CPU-a i GPU-a, a stražnji ili gornji ispuh zatvara krug. Dobar protok zraka često je važniji od skupog hladnjaka.",
+  fact:"Jedan 140 mm ventilator pomiče gotovo dvostruko više zraka od 120 mm ventilatora pri istoj razini buke, zbog čega su veliki, spori ventilatori tiši."},
+ specs:[["Veličina","120 mm"],["Ležaj","Fluidno-dinamički"],["Okretaji","500 - 1800"],["Protok zraka","62 CFM"],["Buka","≤ 26 dBA"]],
+ functions:["Uvlače hladan zrak u kućište sprijeda.","Izbacuju topli zrak straga i odozgo.","Održavaju ravnotežu tlaka kako bi spriječili prašinu.","Usmjeravaju zrak prema usisima CPU-a i GPU-a."],
+ issues:["Istrošen ležaj uzrokuje brusnu ili zvečeću buku.","Nakupljena prašina neuravnotežuje lopatice.","Olabavljeni vijci prenose vibracije na kućište.","Ventilatori nespojeni na priključke ostaju nemi."],
+ credit:{t:"CPU_fan SOGUTUCU",u:"https://skfb.ly/6S8JV",a:"sinemmbagcioglu",l:CC}},
+{id:"keyboard",index:"12",name:"Tipkovnica",tagline:"Primarni ulazni uređaj",
+ short:"Glavni način na koji tipkate, zapovijedate i upravljate računalom.",model:"models/keyboard.glb",
+ overview:{description:"Tipkovnica je primarni uređaj za unos teksta i naredbi. Svaki pritisak tipke zatvara sklopku koju kontroler pretvara u skenkod, a operacijski sustav ga prevodi u znakove, prečace i radnje.",
+  realWorld:"Od pisanja dokumenata do upravljanja igrama, tipkovnica je mjesto gdje započinje većina rada na računalu. Mehaničke tipkovnice nude taktilnu povratnu informaciju, dok niskoprofilne membranske drže prijenosnike tankima i tihima.",
+  fact:"Mehanička tipkovnica može registrirati više od 100 istovremenih pritisaka tipki - tzv. potpuni N-key rollover - zbog čega je igrači i tipkači preferiraju zbog brzine i točnosti."},
+ specs:[["Raspored","Puni / TKL / 75 %"],["Vrsta sklopki","Mehaničke"],["Povezivanje","USB-C / 2,4 GHz / BT"],["Pozadinsko osvjetljenje","RGB po tipki"],["Broj tipki","104"]],
+ functions:["Unosi tekst i znakove pritiscima tipki.","Pokreće prečace i makroe radi brzine.","Služi za unos u igrama i navigaciju.","Podržava pristupačnost, npr. ljepljive tipke i premapiranje."],
+ issues:["Ljepljive ili nereaktivne sklopke zbog prašine i nečistoće.","Kvar sklopki na često korištenim slovima.","Kašnjenje bežičnog unosa ili prekidi veze.","Prolivena tekućina izaziva kratki spoj kontrolera."],
+ credit:{t:"keyboard",u:"https://skfb.ly/6UFI8",a:"45P3R4",l:CC}},
+{id:"mouse",index:"13",name:"Miš",tagline:"Pokazivanje i upravljanje kursorom",
+ short:"Precizan alat koji pomiče kursor i upravlja interakcijama.",model:"models/mouse.glb",
+ overview:{description:"Miš pretvara pokret ruke u pomicanje kursora. Optički senzor bilježi kretanje po podlozi tisućama puta u sekundi, dok tipke i kotačić pokreću klikove, povlačenje i navigaciju.",
+  realWorld:"Miš je prirodan način za pokazivanje, odabir i kretanje. Senzori visokog DPI-ja prate sitne pokrete zgloba za precizno ciljanje u igrama i rad do razine piksela u dizajnerskim alatima.",
+  fact:"Moderni gaming miševi prijavljuju položaj do 8000 puta u sekundi i mogu pratiti brzine od 650 inča u sekundi bez gubitka točnosti."},
+ specs:[["Senzor","Optički"],["DPI","400 - 26 000"],["Tipke","6"],["Povezivanje","2,4 GHz / BT / USB"],["Masa","58 g"]],
+ functions:["Pomiče kursor optičkim praćenjem.","Odabire, klika i povlači primarnom i sekundarnom tipkom.","Kotačićem pomiče stranice i dokumente.","Mijenja osjetljivost u hodu za precizne zadatke."],
+ issues:["Prašina na senzoru uzrokuje nepravilne skokove kursora.","Dvostruki klik zbog istrošenih mikroprekidača.","Istrošena klizna stopala zapinju na podlozi.","Bežične smetnje uzrokuju kašnjenje ili prekide veze."],
+ credit:{t:"Low poly - Computer Mouse [FREE] Download",u:"https://skfb.ly/pM8xn",a:"IQINISO",l:CC}},
+{id:"monitor",index:"14",name:"Monitor",tagline:"Vizualni izlazni zaslon",
+ short:"Zaslon koji pretvara iscrtane sličice u slike koje vidite.",model:"models/monitor.glb",
+ overview:{description:"Monitor je vizualni izlaz računala. GPU iscrta sličicu, ploča zaslona osvježi milijune piksela u sinkronizaciji, a ono što vidite konačni je proizvod svega što sustav izračuna.",
+  realWorld:"Frekvencija osvježavanja, razlučivost i vrsta ploče određuju koliko je doživljaj gladak i oštar. Ploča od 144 Hz iscrtava dvostruko češće od standardnih 60 Hz, zbog čega kretanje djeluje dramatično glađe.",
+  fact:"8K zaslon sadrži otprilike 33 milijuna pojedinačno adresabilnih piksela, a svaki se mora osvježiti do 144 puta u sekundi bez vidljivog cijepanja slike."},
+ specs:[["Ploča","IPS"],["Razlučivost","2560 × 1440"],["Frekvencija osvježavanja","144 Hz"],["Vrijeme odziva","1 ms"],["Priključci","HDMI 2.1 / DP 1.4 / USB-C"]],
+ functions:["Prikazuje sličice koje je iscrtao GPU.","Daje točne boje za dizajn i medije.","Podržava adaptivnu sinkronizaciju radi uklanjanja cijepanja slike.","Služi kao čvorište za USB i video veze."],
+ issues:["Mrtvi ili zaglavljeni pikseli zbog tvorničkih grešaka.","Curenje pozadinskog osvjetljenja na rubovima ploče.","Kašnjenje signala zbog teške obrade slike.","Urezivanje statičnih slika (burn-in) na OLED pločama."],
+ credit:{t:"Acer monitor",u:"https://skfb.ly/o8vT7",a:"Turtle_Flipper",l:CC}},
+{id:"ups",index:"15",name:"UPS",tagline:"Besprekidno napajanje",
+ short:"Baterijska pričuva koja drži računalo živim tijekom nestanka i padova napona.",model:"models/ups.glb",
+ overview:{description:"Besprekidno napajanje (UPS) nalazi se između zidne utičnice i računala. Njegova baterija neprestano nadzire mrežni napon i čim mreža ispadne prebacuje se na baterijsko napajanje, dajući vam vremena da spremite rad i ispravno ugasite računalo.",
+  realWorld:"UPS također čisti napon koji ide u hardver, prigušujući udare i filtrirajući propade napona - „prljavu” struju koja tiho opterećuje napajanja, ploče i diskove. Za one koji rade na dokumentima ili vode poslužitelje, to je najjeftinije osiguranje u računarstvu.",
+  fact:"UPS se može prebaciti na bateriju za manje od 10 milisekundi - brže nego što bi računalo uopće primijetilo, zbog čega zaslon ne zatreperi pri kratkom prekidu."},
+ specs:[["Kapacitet","700 VA / 420 W"],["Baterija","12 V, 7 Ah"],["Autonomija","~10 min pri punom opterećenju"],["Izlazi","8 × C13"],["Zaštita od prenapona","480 J"]],
+ functions:["Premošćuje prekide napajanja kako računalo ne bi palo usred upisa.","Prigušuje prenapone i filtrira šum iz mreže.","Daje vremena za spremanje rada i sigurno gašenje.","Regulira napon za opremu u nestabilnim mrežama."],
+ issues:["Starenje baterija smanjuje autonomiju nakon 2-3 godine.","Punjive ćelije se pregrijavaju ako su ventilacijski otvori blokirani.","Neuspjela preklapanja UPS-a pri brzim uzastopnim prekidima.","Pasivne jedinice propuštaju padove napona do PSU-a."],
+ credit:{t:"APC Battery Backup UPS",u:"https://sketchfab.com/3d-models/apc-battery-backup-ups-b5c5af44c00848d3bad02327e3cec236",a:"Graham Rust",l:CC}},
+{id:"avr",index:"16",name:"AVR",tagline:"Automatski regulator napona",
+ short:"Izglađuje nestabilan mrežni napon i štiti računalo od padova i skokova.",model:"models/avr.glb",
+ overview:{description:"Automatski regulator napona (AVR) nalazi se između zidne utičnice i računala i neprestano nadzire mrežni napon. Kad napon padne ili skoči, ispravlja ga u stvarnom vremenu pa vaš hardver uvijek dobiva čist, stabilan napon - bez obzira koliko je mreža loša.",
+  realWorld:"Na područjima s promjenjivim naponom AVR je prva linija obrane stolnog računala. Padovi i skokovi napona tiho opterećuju napajanja, matične ploče i diskove - AVR ublažuje te oscilacije pa napajanje dobiva uvijek dobro ponašajući ulaz.",
+  fact:"Za razliku od UPS-a, AVR ne daje rezervno napajanje - samo stabilizira napon. Ispravlja u tipičnom rasponu od ±25 % i reagira unutar milisekundi, daleko brže nego što bi čovjek primijetio treperenje."},
+ specs:[["Ulazni napon","140 - 280 VAC"],["Izlazni napon","220 V ± 8 %"],["Kapacitet","1000 VA / 600 W"],["Izlazi","6 × univerzalni"],["Zaštita od prenapona","Ugrađena"]],
+ functions:["Regulira ulazni napon pri padovima i skokovima.","Prigušuje naponske šiljke prije nego dođu do komponenti.","Daje stabilno napajanje PSU-u u nestabilnim mrežama.","Štiti od nepravilnosti polariteta i faze."],
+ issues:["Istrošeni releji učestalo kliktaju pri promjenama napona.","Pregrijavanje pri radu na rubu raspona.","Pad izlaznog napona pri velikom trajnom opterećenju.","Istrošeni kontakti smanjuju zaštitu od prenapona tijekom vremena."],
+ credit:{t:"Automatic Voltage Regulator (AVR)",u:"https://skfb.ly/oMqpy",a:"seiippai",l:CC}}
+];
+
+var CPU_LAYERS = [
+{n:1,color:"#d7dde6",title:"Integrirani raspršivač topline (IHS)",
+ d:"Uglačani niklovani poklopac koji prekriva procesor. Ravnomjerno raspršuje toplinu po cijeloj površini čipa i daje hladnjaku ravnu, pouzdanu točku oslanjanja - a istodobno štiti osjetljivi silicij ispod.",
+ p:"Provodi toplinu s jezgre (die) po cijeloj površini i daje glatku kontaktnu plohu uz koju se pritišće CPU hladnjak.",
+ f:["Većina IHS-ova su bakreni s niklovanim premazom - premaz žrtvuje malo toplinske učinkovitosti za otpornost na koroziju i čist izgled.","IHS nosi oznake proizvođača jer je jedini dio čipa koji obično vidite.","IHS je debeo samo nekoliko milimetara, a mora rasporediti toplinu jezgre koja može prelaziti 250 W."],
+ pr:["Iskrivljen ili savijen IHS slabo naliježe na hladnjak pa temperature skaču čak i uz dobru pastu.","Delidding - skidanje IHS-a radi zamjene paste ispod - može napuknuti jezgru ako se radi nemarno."]},
+{n:2,color:"#cfe0ff",title:"Toplinski sučeljni materijal (TIM)",
+ d:"Toplinski sučeljni materijal je tanak sloj paste između silicijske jezgre i raspršivača topline. Ispunjava mikroskopske zračne procjepe koji bi inače zarobili toplinu i izolirali silicij.",
+ p:"Povećava prijenos topline uklanjanjem sitnih zračnih džepova između jezgre i IHS-a, pa toplina lakše teče prema hladnjaku.",
+ f:["Vrhunske paste koriste punila od srebra ili borovog nitrida kako bi toplinsku vodljivost podigle daleko iznad obične bijele paste.","Pasta se tijekom godina suši i „istiskuje” zbog toplinskih ciklusa - zato ponovno nanošenje paste na starom CPU-u može dramatično sniziti temperature.","Tekući metali provode toplinu još bolje, ali mogu otopiti aluminijske baze hladnjaka ako procure."],
+ pr:["Premalo paste ostavlja suha mjesta; previše se prelijeva preko ruba jezgre i može izazvati kratki spoj susjednih komponenti.","Osušena termalna pasta najčešći je razlog zašto stari CPU-ovi odjednom počnu raditi vruće."]},
+{n:3,color:"#9fb0c6",title:"Silicijska jezgra (die)",
+ d:"Silicijska jezgra je sam procesor - milijarde tranzistora ugravirane u tanku krišku silicija koja izvodi svaki izračun vašeg računala.",
+ p:"Izvršava naredbe, obavlja aritmetiku i prenosi podatke kroz sustav pri milijardama operacija u sekundi.",
+ f:["Moderna jezgra smješta više od 8 milijardi tranzistora na nekoliko kvadratnih centimetara - svaki manji od virusa.","Značajke jezgre mjere se u nanometrima: tranzistor od 5 nm širok je otprilike 20 atoma.","Jezgra je debela tek djelić milimetra, a koncentrira golemu toplinu na maloj površini."],
+ pr:["Silicij može degradirati tijekom godina visokog napona, polako smanjujući prostor za overclocking.","Napuknuta jezgra - obično zbog pritiska montaže ili nespretnog delid-a - trenutno uništava CPU."]},
+{n:4,color:"#2f6b34",title:"Podloga (substrat)",
+ d:"Zelena pločica koja nosi jezgru i povezuje je s matičnom pločom. Tisuće mikroskopskih staza raspoređuju signale jezgre prema pinovima koji se uključuju u podnožje.",
+ p:"Raspodjeljuje napajanje i vodi svaki podatkovni signal između silicija i podnožja matične ploče.",
+ f:["Podloga je minijaturna tiskana pločica s desecima tankih slojeva, svaki tanji od ljudske vlasi.","Svaki od vanjskih pinova CPU-a - često više od tisuću - završava na ovoj maloj pločici.","Njezin je posao obrnut od posla matične ploče: skuplja signale s guste jezgre i raspoređuje ih prema podnožju."],
+ pr:["Napukli lemni spojevi između jezgre i podloge uzrokuju povremene padove i neuspješno pokretanje.","Vlaga ili nečistoća na kontaktima podloge mogu uzrokovati greške pri pokretanju i nestabilnost."]},
+{n:5,color:"#d8b45a",title:"Kontaktni pinovi",
+ d:"Zlatni kontaktni pinovi prenose napajanje i podatke između CPU-a i podnožja matične ploče. Kod stolnih čipova s podnožjem poput ovog, oni su jedina fizička veza između procesora i ostatka sustava.",
+ p:"Osiguravaju električnu i mehaničku vezu koja uglavljuje CPU u podnožje i drži ga napajanim.",
+ f:["Ovaj čip u stilu AM4 nosi stotine zlatnih pinova, a svaki se mora savršeno poravnati sa svojom rupom u podnožju.","Pinovi su pozlaćeni jer zlato odolijeva koroziji koja bi blokirala slabe električne signale.","Kod PGA podnožja pinovi su na samom CPU-u, pa savijen pin obično znači uništen procesor."],
+ pr:["Savijeni ili slomljeni pinovi klasičan su ubojica CPU-a - jedan krivo poravnat kontakt može spriječiti pokretanje sustava.","Prašina ili nečistoća zarobljena između pinova i podnožja stvara loše kontakte i nasumične kvarove."]}
+];
+
+/* ============================ SUČELJE ============================ */
+(function () {
+  "use strict";
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); };
+
+  if (location.protocol === "file:") $("#fileBanner").style.display = "block";
+
+  var listEl = $("#list"), panel = $("#panel"), current = null, tab = "pregled", viewer = null;
+  var TABS = [["pregled","Pregled"],["specifikacije","Specifikacije"],["funkcije","Funkcije"],["problemi","Problemi"]];
+
+  // Popis komponenti
+  COMPONENTS.forEach(function (c) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "item"; b.dataset.id = c.id; b.setAttribute("role","listitem");
+    b.innerHTML = "<small>" + c.index + "</small><span>" + esc(c.name) + "</span>";
+    b.addEventListener("click", function () { select(c.id, true); });
+    listEl.appendChild(b);
+  });
+
+  function renderPanel() {
+    var c = current; if (!c) return;
+    var tabs = TABS.map(function (t) {
+      return '<button type="button" class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (tab === t[0]) + '">' + t[1] + "</button>";
+    }).join("");
+    var body = "";
+    if (tab === "pregled") {
+      body = "<h4>Što je to?</h4><p>" + esc(c.overview.description) + "</p><h4>U stvarnom svijetu</h4><p>" + esc(c.overview.realWorld) + "</p><h4>Znate li?</h4><p>" + esc(c.overview.fact) + "</p>";
+    } else if (tab === "specifikacije") {
+      body = '<table class="spec">' + c.specs.map(function (r) { return "<tr><td>" + esc(r[0]) + "</td><td>" + esc(r[1]) + "</td></tr>"; }).join("") + "</table>";
+    } else if (tab === "funkcije") {
+      body = "<h4>Što radi</h4><ul>" + c.functions.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>";
+    } else {
+      body = "<h4>Česti problemi</h4><ul>" + c.issues.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>";
+    }
+    var cr = c.credit;
+    var credit = '<div class="credit">3D model: „' + esc(cr.t) + '” (<a href="' + esc(cr.u) + '" target="_blank" rel="noopener">izvor</a>), autor: ' + esc(cr.a) + ", licenca: " + esc(cr.l) + ".</div>";
+    panel.innerHTML = '<div class="idx">' + c.index + " / " + COMPONENTS.length + "</div><h3>" + esc(c.name) + '</h3><p class="tag">' + esc(c.tagline) + "</p><p class=\"tag\" style=\"color:#c4cbdb\">" + esc(c.short) + '</p><div class="tabs" role="tablist">' + tabs + '</div><div class="pane">' + body + "</div>" + credit;
+    Array.prototype.forEach.call(panel.querySelectorAll(".tab"), function (t) {
+      t.addEventListener("click", function () { tab = t.dataset.tab; renderPanel(); });
+    });
+  }
+
+  function setLoader(msg, pct, hide) {
+    var l = $("#loader"); $("#loaderText").textContent = msg;
+    $("#bar").style.width = Math.round((pct || 0) * 100) + "%";
+    l.classList.toggle("hide", !!hide);
+  }
+
+  function select(id, push) {
+    var c = COMPONENTS.filter(function (x) { return x.id === id; })[0] || COMPONENTS[0];
+    current = c; tab = "pregled";
+    Array.prototype.forEach.call(listEl.children, function (b) { b.setAttribute("aria-current", b.dataset.id === c.id ? "true" : "false"); });
+    renderPanel();
+    if (push) history.replaceState(null, "", "#komponenta=" + c.id);
+    if (viewer) { setLoader("Učitavanje 3D modela…", 0, false); viewer.show(c.model); }
+  }
+
+  // ---------- Slojevi CPU-a: ilustracije (SVG) + kartice + 3D ----------
+  var SHORT = ["IHS","Pasta","Jezgra","Podloga","Pinovi"];
+  var NS = 'xmlns="http://www.w3.org/2000/svg"';
+
+  // Presjek procesora; označen je sloj "act"
+  function figCross(act) {
+    var C = CPU_LAYERS.map(function (l) { return l.color; });
+    function f(i) {
+      var on = i === act;
+      return 'fill="' + C[i] + '" fill-opacity="' + (on ? 1 : 0.22) + '" stroke="' + (on ? "#fff" : C[i]) + '" stroke-opacity="' + (on ? 1 : 0.5) + '" stroke-width="' + (on ? 2 : 1) + '"';
+    }
+    var pins = "";
+    for (var k = 0; k < 15; k++) pins += '<rect x="' + (46 + k * 15.5) + '" y="140" width="6" height="22" rx="1.5" ' + f(4) + "/>";
+    return "<svg " + NS + ' viewBox="0 40 320 130" role="img" aria-label="Presjek procesora, označen sloj ' + (act + 1) + ": " + esc(CPU_LAYERS[act].title) + '">' +
+      '<rect x="40" y="48" width="240" height="20" rx="3" fill="none" stroke="#667089" stroke-dasharray="4 3"/>' +
+      '<text x="160" y="62" text-anchor="middle" font-size="10" fill="#8b95ab">hladnjak (naliježe ovdje)</text>' +
+      '<rect x="40" y="72" width="240" height="30" rx="3" ' + f(0) + "/>" +
+      '<rect x="40" y="102" width="18" height="20" ' + f(0) + '/><rect x="262" y="102" width="18" height="20" ' + f(0) + "/>" +
+      '<rect x="120" y="102" width="80" height="8" ' + f(1) + "/>" +
+      '<rect x="120" y="110" width="80" height="12" ' + f(2) + "/>" +
+      '<rect x="30" y="122" width="260" height="16" rx="2" ' + f(3) + "/>" + pins + "</svg>";
+  }
+
+  // Pogled odozgo (shematski) za svaki sloj
+  function figTop(i) {
+    var b = "";
+    if (i === 0) {
+      b = '<rect x="14" y="14" width="132" height="132" rx="12" fill="#d7dde6"/><rect x="30" y="30" width="100" height="100" rx="6" fill="none" stroke="#8a93a1" stroke-width="2"/>' +
+          '<text x="80" y="88" text-anchor="middle" font-size="30" font-weight="700" fill="#5b6472">CPU</text><path d="M20 126 L34 140 L20 140Z" fill="#d8b45a"/>';
+    } else if (i === 1) {
+      b = '<rect x="30" y="30" width="100" height="100" rx="6" fill="#27384f"/>' +
+          '<path d="M80 40 C110 38 124 60 120 84 C118 112 96 124 74 120 C48 116 38 96 42 74 C46 52 60 42 80 40Z" fill="#cfe0ff" fill-opacity=".88"/>' +
+          '<circle cx="127" cy="38" r="4" fill="#cfe0ff"/><circle cx="35" cy="124" r="3" fill="#cfe0ff"/><path d="M58 60 C70 50 88 50 98 58" stroke="#fff" stroke-opacity=".6" stroke-width="3" fill="none" stroke-linecap="round"/>';
+    } else if (i === 2) {
+      b = '<rect x="24" y="24" width="112" height="112" rx="4" fill="#26364d" stroke="#9fb0c6" stroke-width="2"/>';
+      for (var r = 0; r < 2; r++) for (var c = 0; c < 4; c++) b += '<rect x="' + (32 + c * 26) + '" y="' + (r ? 98 : 32) + '" width="22" height="30" rx="2" fill="#3b5a85" stroke="#7fa6d8"/>';
+      b += '<rect x="32" y="68" width="96" height="24" rx="2" fill="#2f4a70" stroke="#7fa6d8"/><text x="80" y="84" text-anchor="middle" font-size="9" fill="#cfe0ff">predmemorija</text>';
+    } else if (i === 3) {
+      b = '<rect x="14" y="14" width="132" height="132" rx="6" fill="#2f6b34"/><rect x="50" y="50" width="60" height="60" fill="#255a2a" stroke="#6fbf76" stroke-dasharray="4 3"/>' +
+          '<g stroke="#5aa860" stroke-width="1.6" fill="none"><path d="M50 60 H30 V30"/><path d="M110 60 H130 V36"/><path d="M50 100 H28 V128"/><path d="M110 100 H132 V126"/><path d="M60 50 V28"/><path d="M100 50 V26"/><path d="M60 110 V134"/><path d="M100 110 V136"/></g>' +
+          '<g fill="#d8b45a"><circle cx="30" cy="30" r="2.6"/><circle cx="130" cy="36" r="2.6"/><circle cx="28" cy="128" r="2.6"/><circle cx="132" cy="126" r="2.6"/><circle cx="60" cy="28" r="2.6"/><circle cx="100" cy="26" r="2.6"/><circle cx="60" cy="134" r="2.6"/><circle cx="100" cy="136" r="2.6"/></g>' +
+          '<g fill="#1b1b1b"><rect x="20" y="70" width="6" height="12"/><rect x="134" y="70" width="6" height="12"/><rect x="20" y="92" width="6" height="12"/><rect x="134" y="92" width="6" height="12"/></g>';
+    } else {
+      b = '<rect x="14" y="14" width="132" height="132" rx="6" fill="#2f6b34" fill-opacity=".35" stroke="#d8b45a"/><path d="M16 16 L26 16 L16 26Z" fill="#d8b45a"/>';
+      for (var rr = 0; rr < 10; rr++) for (var cc = 0; cc < 10; cc++) {
+        if (rr > 2 && rr < 7 && cc > 2 && cc < 7) continue;
+        if (rr === 0 && cc === 0) continue;
+        b += '<circle cx="' + (28 + cc * 11.5) + '" cy="' + (28 + rr * 11.5) + '" r="3.2" fill="#d8b45a"/>';
+      }
+    }
+    return "<svg " + NS + ' viewBox="0 0 160 160" role="img" aria-label="Pogled odozgo: ' + esc(CPU_LAYERS[i].title) + '">' + b + "</svg>";
+  }
+
+  var layersEl = $("#layers"), chipsEl = $("#cpuChips"), capEl = $("#cpuCaption"), cpuApi = null, cpuSel = null;
+
+  layersEl.innerHTML = CPU_LAYERS.map(function (l, k) {
+    return '<details class="layer" data-i="' + k + '"><summary><span class="dot" style="background:' + l.color + '"></span><span class="num">Sloj ' + l.n + "</span>" + esc(l.title) +
+      '</summary><div class="body"><div class="figs"><figure>' + figCross(k) + "<figcaption>Presjek - označen je ovaj sloj</figcaption></figure><figure>" + figTop(k) +
+      "<figcaption>Pogled odozgo (shematski)</figcaption></figure></div><div><h5>Opis</h5><p>" + esc(l.d) + "</p></div><div><h5>Svrha</h5><p>" + esc(l.p) +
+      "</p></div><div><h5>Zanimljivosti</h5><ul>" + l.f.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") +
+      "</ul></div><div><h5>Mogući problemi</h5><ul>" + l.pr.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul></div></div></details>";
+  }).join("");
+
+  chipsEl.innerHTML = CPU_LAYERS.map(function (l, k) {
+    return '<button type="button" class="chip" data-i="' + k + '" aria-pressed="false"><span class="dot" style="background:' + l.color + '"></span>' + (k + 1) + ". " + SHORT[k] + "</button>";
+  }).join("");
+
+  function selectLayer(i) {
+    cpuSel = i;
+    Array.prototype.forEach.call(layersEl.children, function (d, k) { d.open = (k === i); });
+    Array.prototype.forEach.call(chipsEl.children, function (c, k) { c.setAttribute("aria-pressed", k === i ? "true" : "false"); });
+    capEl.textContent = i === null ? "Kliknite sloj na modelu ili na popisu." : "Sloj " + CPU_LAYERS[i].n + ": " + CPU_LAYERS[i].title;
+    if (cpuApi) { cpuApi.select(i); if (i !== null) cpuApi.setExploded(true); }
+  }
+  Array.prototype.forEach.call(layersEl.children, function (d, k) {
+    d.addEventListener("toggle", function () {
+      if (d.open && cpuSel !== k) selectLayer(k);
+      else if (!d.open && cpuSel === k) selectLayer(null);
+    });
+  });
+  Array.prototype.forEach.call(chipsEl.children, function (c, k) {
+    c.addEventListener("click", function () { selectLayer(cpuSel === k ? null : k); });
+  });
+  layersEl.children[0].open = true; cpuSel = 0;
+  chipsEl.children[0].setAttribute("aria-pressed", "true");
+  capEl.textContent = "Sloj 1: " + CPU_LAYERS[0].title;
+
+  // Početni odabir (podržava #komponenta=cpu)
+  var m = location.hash.match(/komponenta=([\w-]+)/);
+  select(m ? m[1] : COMPONENTS[0].id, false);
+
+  // Pokretanje 3D preglednika (zaseban modul; ne radi preko file://)
+  import("./js/viewer.js").then(function (mod) {
+    if (!document.createElement("canvas").getContext("webgl2") && !document.createElement("canvas").getContext("webgl")) {
+      setLoader("Vaš preglednik ne podržava WebGL pa se 3D prikaz ne može pokazati.", 0, false); return;
+    }
+    viewer = mod.initViewer($("#viewer"), {
+      onProgress: function (p) { setLoader("Učitavanje 3D modela…", p, false); },
+      onReady: function () { setLoader("", 1, true); },
+      onError: function () { setLoader("Model nije moguće učitati. Provjerite je li mapa models/ na istom mjestu kao index.html.", 0, false); }
+    });
+    viewer.show(current.model);
+    $("#btnReset").addEventListener("click", function () { viewer.resetView(); });
+    $("#btnRotate").addEventListener("click", function () {
+      var on = !viewer.autoRotate; viewer.setAutoRotate(on);
+      this.textContent = on ? "⏸ Zaustavi rotaciju" : "▶ Pokreni rotaciju";
+    });
+  }).catch(function () {
+    setLoader(location.protocol === "file:" ? "3D prikaz zahtijeva lokalni poslužitelj (vidi upozorenje na vrhu stranice)." : "Neuspjelo učitavanje 3D prikaza.", 0, false);
+    $("#fileBanner").style.display = location.protocol === "file:" ? "block" : "none";
+  });
+
+  // 3D prikaz slojeva procesora (zaseban modul; ne radi preko file://)
+  import("./js/cpu-layers.js").then(function (mod) {
+    cpuApi = mod.initCpuExplode($("#cpuViewer"), {
+      onSelect: function (i) { selectLayer(i); },
+      onToggle: function (on) { $("#btnExplode").textContent = on ? "⇕ Sastavi slojeve" : "⇕ Rastavi slojeve"; },
+      onReady: function () { $("#cpuMsg").classList.add("hide"); }
+    });
+    cpuApi.select(cpuSel);
+    $("#btnExplode").addEventListener("click", function () { cpuApi.setExploded(!cpuApi.exploded); });
+    $("#btnCpuReset").addEventListener("click", function () { cpuApi.resetView(); });
+  }).catch(function () {
+    $("#cpuMsg").firstChild.textContent = location.protocol === "file:" ? "3D prikaz zahtijeva lokalni poslužitelj (vidi upozorenje na vrhu stranice)." : "Neuspjelo učitavanje 3D prikaza.";
+    $("#btnExplode").style.display = "none"; $("#btnCpuReset").style.display = "none";
+  });
+})();
+</script>
+</body>
+</html>
