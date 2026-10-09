@@ -1,7 +1,7 @@
 # Anatomija računala (hrvatska inačica)
 
-Interaktivni 3D atlas računalnog hardvera – hrvatski prijevod i statička inačica
-otvorenog projekta [PC Anatomy](https://github.com/brickshow/pc-anatomy) (MIT).
+Interaktivni 3D atlas računalnog hardvera 
+Dio dizajna preuzet s otvorenog projekta [PC Anatomy](https://github.com/brickshow/pc-anatomy) (MIT).
 
 ## Struktura
 ```
@@ -31,7 +31,7 @@ Otvaranjem `index.html` dvoklikom tekst se prikaže, ali 3D prikaz neće raditi 
 
 ## Slojevi CPU-a
 Sekcija ima 3D model koji se rastavlja na 5 slojeva (klik na sloj na modelu, na popisu ili na čip), a svaka kartica sloja
-ima SVG ilustracije: presjek procesora s označenim slojem i shematski pogled odozgo.
+ima SVG ilustracije: presjek procesora s označenim slojem i shematski pogled odozgo koja je dodatno kreirana.
 Ilustracije su u `index.html` (funkcije `figCross` i `figTop`), a 3D boje/razmaci u `js/cpu-layers.js`.
 
 ## Što je prevedeno
