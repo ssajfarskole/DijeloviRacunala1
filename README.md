@@ -15,12 +15,6 @@ models/           ← 16 GLB modela (optimizirani: meshopt + WebP teksture, ukup
 ```
 Sve putanje su **relativne**, pa radi i na `https://korisnik.github.io/repo/` i u podmapi.
 
-## Objava na GitHub Pages
-1. Napravite novi repozitorij i prenesite **cijeli sadržaj ove mape** (zadržite strukturu mapa).
-   Najveći model je ~6 MB pa je i prijenos kroz web-sučelje (Add file → Upload files) u redu.
-2. *Settings → Pages → Build and deployment → Deploy from a branch* → grana `main`, mapa `/ (root)`.
-3. Nakon minute-dvije stranica je na `https://<korisnik>.github.io/<repozitorij>/`.
-
 ## Lokalno pokretanje
 Preglednici blokiraju učitavanje 3D modela preko `file://`, zato koristite mali poslužitelj:
 ```
